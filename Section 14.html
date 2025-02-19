@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>RFM Segmentation Chart</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        margin: 20px;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 40px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .btn-group {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .btn-group button {
+        background: #007BFF;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .btn-group button:hover {
+        background: #0056b3;
+      }
+      h1 {
+        text-align: center;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>RFM Segmentation Chart</h1>
+      <div class="btn-group">
+        <button onclick="setFilter('all')">Show All</button>
+        <button onclick="setFilter('positive')">Positive Sentiment</button>
+        <button onclick="setFilter('negative')">Negative Sentiment</button>
+      </div>
+      <canvas id="rfmChart"></canvas>
+    </div>
+    <script>
+      const ratingMap = { "High": 3, "Medium": 2, "Low": 1 };
+      const dataRows = [
+        { id: 1, R: "High", F: "High", M: "High", classification: "Champion" },
+        { id: 2, R: "High", F: "High", M: "Medium", classification: "Loyal" },
+        { id: 3, R: "High", F: "High", M: "Low", classification: "Loyal" },
+        { id: 4, R: "High", F: "Medium", M: "High", classification: "Loyal" },
+        { id: 5, R: "High", F: "Medium", M: "Medium", classification: "Potential loyal" },
+        { id: 6, R: "High", F: "Medium", M: "Low", classification: "Promising" },
+        { id: 7, R: "High", F: "Low", M: "High", classification: "Recent Customers" },
+        { id: 8, R: "High", F: "Low", M: "Medium", classification: "Recent Customers" },
+        { id: 9, R: "High", F: "Low", M: "Low", classification: "Recent Customers" },
+        { id: 10, R: "Medium", F: "High", M: "High", classification: "At risk" },
+        { id: 11, R: "Medium", F: "High", M: "Medium", classification: "Need attention" },
+        { id: 12, R: "Medium", F: "High", M: "Low", classification: "About to sleep" },
+        { id: 13, R: "Medium", F: "Medium", M: "High", classification: "Need attention" },
+        { id: 14, R: "Medium", F: "Medium", M: "Medium", classification: "About to sleep" },
+        { id: 15, R: "Medium", F: "Medium", M: "Low", classification: "About to sleep" },
+        { id: 16, R: "Medium", F: "Low", M: "High", classification: "Need attention" },
+        { id: 17, R: "Medium", F: "Low", M: "Medium", classification: "About to sleep" },
+        { id: 18, R: "Medium", F: "Low", M: "Low", classification: "About to sleep" },
+        { id: 19, R: "Low", F: "High", M: "High", classification: "Cant lose them" },
+        { id: 20, R: "Low", F: "High", M: "Medium", classification: "Cant lose them" },
+        { id: 21, R: "Low", F: "High", M: "Low", classification: "Hibernating" },
+        { id: 22, R: "Low", F: "Medium", M: "High", classification: "Cant lose them" },
+        { id: 23, R: "Low", F: "Medium", M: "Medium", classification: "Hibernating" },
+        { id: 24, R: "Low", F: "Medium", M: "Low", classification: "Hibernating" },
+        { id: 25, R: "Low", F: "Low", M: "High", classification: "Cant lose them" },
+        { id: 26, R: "Low", F: "Low", M: "Medium", classification: "Hibernating" },
+        { id: 27, R: "Low", F: "Low", M: "Low", classification: "Lost" }
+      ];
+      
+      const aggregate = {};
+      dataRows.forEach(row => {
+        const key = row.classification;
+        if (!aggregate[key]) {
+          aggregate[key] = { count: 0, sumR: 0, sumF: 0, sumM: 0 };
+        }
+        aggregate[key].count++;
+        aggregate[key].sumR += ratingMap[row.R];
+        aggregate[key].sumF += ratingMap[row.F];
+        aggregate[key].sumM += ratingMap[row.M];
+      });
+      const aggregatedData = Object.keys(aggregate).map(key => ({
+        classification: key,
+        R: aggregate[key].sumR / aggregate[key].count,
+        F: aggregate[key].sumF / aggregate[key].count,
+        M: aggregate[key].sumM / aggregate[key].count
+      }));
+      
+      const positiveSentiment = ["Champion", "Loyal", "Potential loyal", "Promising", "Recent Customers"];
+      const negativeSentiment = ["At risk", "Need attention", "About to sleep", "Cant lose them", "Hibernating", "Lost"];
+      
+      function qualitativeLabel(value) {
+        return value >= 2.5 ? "High" : value >= 1.5 ? "Medium" : "Low";
+      }
+      
+      function getChartData(filter) {
+        let data = aggregatedData;
+        if (filter === "positive") data = data.filter(d => positiveSentiment.includes(d.classification));
+        else if (filter === "negative") data = data.filter(d => negativeSentiment.includes(d.classification));
+        return {
+          labels: data.map(d => d.classification),
+          datasets: [
+            {
+              label: "Recency",
+              data: data.map(d => d.R),
+              backgroundColor: "rgba(75, 192, 192, 0.6)",
+              borderColor: "rgba(75, 192, 192, 1)",
+              borderWidth: 1
+            },
+            {
+              label: "Frequency",
+              data: data.map(d => d.F),
+              backgroundColor: "rgba(153, 102, 255, 0.6)",
+              borderColor: "rgba(153, 102, 255, 1)",
+              borderWidth: 1
+            },
+            {
+              label: "Monetary",
+              data: data.map(d => d.M),
+              backgroundColor: "rgba(255, 159, 64, 0.6)",
+              borderColor: "rgba(255, 159, 64, 1)",
+              borderWidth: 1
+            }
+          ]
+        };
+      }
+      
+      let ctx = document.getElementById("rfmChart").getContext("2d");
+      let myChart = new Chart(ctx, {
+        type: "bar",
+        data: getChartData("all"),
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: "top", labels: { font: { size: 14 } } },
+            title: { display: true, text: "Segmentasi RFM (Semua Data)", font: { size: 18 } },
+            tooltip: { callbacks: { label: function(context) { return context.dataset.label + ": " + qualitativeLabel(context.raw); } } }
+          },
+          scales: {
+            y: {
+              min: 0.5,
+              max: 3.5,
+              ticks: {
+                stepSize: 1,
+                callback: value => qualitativeLabel(value),
+                font: { size: 14 }
+              },
+              title: { display: true, text: "Penilaian", font: { size: 16 } }
+            }
+          }
+        }
+      });
+      
+      function setFilter(filter) {
+        const newData = getChartData(filter);
+        myChart.data.labels = newData.labels;
+        myChart.data.datasets.forEach((ds, idx) => { ds.data = newData.datasets[idx].data; });
+        myChart.options.plugins.title.text = filter==="all" ? "Segmentasi RFM (Semua Data)" : filter==="positive" ? "Segmentasi RFM (Positive Sentiment)" : "Segmentasi RFM (Negative Sentiment)";
+        myChart.update();
+      }
+    </script>
+  </body>
+</html>
